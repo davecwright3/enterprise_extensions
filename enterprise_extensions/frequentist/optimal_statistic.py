@@ -82,14 +82,26 @@ class OptimalStatistic(object):
         else:
             raise ValueError('Unknown ORF!')
 
-    def compute_os(self, params=None, psd='powerlaw', fgw=None):
+    def compute_os(self, params=None, psd='powerlaw', fgw=None, psd_kwargs={}):
         """
         Computes the optimal statistic values given an
         `enterprise` parameter dictionary.
 
         :param params: `enterprise` parameter dictionary.
-        :param psd: choice of cross-power psd [powerlaw,spectrum]
+        :param psd: choice of cross-power psd ["powerlaw", "spectrum"] or a
+            callable
         :fgw: frequency of GW spectrum to probe, in Hz [default=None]
+        :param psd_kwargs: dictionary of PSD keyword arguments. It is of the form
+            .. code-block:: python
+
+               {
+                 'const':{'log10_A':0},
+                 'par_names':{'gamma':13/3, 'another_param':2}
+               }
+
+            The `const` dictionary is used to set a specific parameter to 1, and
+            the `par_names` dictionary is used to set the values of the
+            remaining parameters.
 
         :returns:
             xi: angular separation [rad] for each pulsar pair
@@ -160,6 +172,11 @@ class OptimalStatistic(object):
                     Sf[idx] = 0.0
                     phiIJ = gp_priors.free_spectrum(self.freqs,
                                                     log10_rho=Sf)
+
+                elif callable(psd):
+                        phiIJ = psd(self.freqs,
+                                    **psd_kwargs['const'],  # Get the variable held constant and its value
+                                    **{p:params[p] for p in psd_kwargs['par_names']})  # Get the variables to find in `params`
 
                 top = np.dot(X[ii], phiIJ * X[jj])
                 bot = np.trace(np.dot(Z[ii]*phiIJ[None, :], Z[jj]*phiIJ[None, :]))
